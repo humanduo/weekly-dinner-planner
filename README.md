@@ -120,6 +120,30 @@ http://127.0.0.1:8787
 
 适合部署到 Render、Railway、Fly.io 等 Node.js 平台。
 
+### Render 一键部署
+
+仓库根目录已包含 `render.yaml`，可以用 Render Blueprint 直接部署：
+
+1. 打开 https://dashboard.render.com/blueprints
+2. 选择 GitHub 仓库 `humanduo/weekly-dinner-planner`
+3. Render 会读取 `render.yaml`
+4. 在创建流程里填写 `DEEPSEEK_API_KEY`
+5. 创建后等待部署完成，访问 Render 给出的 `onrender.com` 地址
+
+当前配置使用 Render 免费 Web Service，适合先分享和试用。免费服务会在一段时间无访问后休眠，首次打开可能需要等待约一分钟；免费服务的文件系统也是临时的，重启或重新部署后 `data/*.json` 可能重置。若要长期保存多人数据，可以升级为带 Persistent Disk 的付费服务，或后续改成 PostgreSQL 数据库。
+
+Render 配置：
+
+- Build Command: `npm ci && npm run build:full`
+- Start Command: `npm run start`
+- Health Check Path: `/api/health`
+- Region: `singapore`
+- Environment Variables:
+  - `DEEPSEEK_API_KEY`: 在 Render 控制台填写，不要提交到 Git
+  - `DEEPSEEK_MODEL`: `deepseek-v4-flash`
+
+### 通用 Node.js 平台
+
 - Build Command: `npm run build:full`
 - Start Command: `npm run start`
 - Environment Variables:
