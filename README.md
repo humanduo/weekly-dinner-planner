@@ -134,7 +134,7 @@ http://127.0.0.1:8787
 
 Render 配置：
 
-- Build Command: `npm ci && npm run build:full`
+- Build Command: `npm ci --include=dev && npm run build:full`
 - Start Command: `npm run start`
 - Health Check Path: `/api/health`
 - Region: `singapore`
