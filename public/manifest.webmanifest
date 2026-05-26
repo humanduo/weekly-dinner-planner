@@ -1,0 +1,19 @@
+{
+  "name": "周晚餐菜谱管理",
+  "short_name": "周晚餐",
+  "description": "管理一周晚餐、菜谱、购物清单和热门菜品灵感。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f0e7",
+  "theme_color": "#f4f0e7",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
