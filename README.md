@@ -57,6 +57,10 @@ Android:
 ## API
 
 - `GET /api/health`：后端健康检查
+- `GET /api/auth/me`：读取当前登录账号
+- `POST /api/auth/register`：注册账号并登录
+- `POST /api/auth/login`：账号密码登录
+- `POST /api/auth/logout`：退出登录
 - `GET /api/state`：读取菜谱、周菜单、购物清单勾选状态
 - `PUT /api/state`：保存完整应用状态
 - `GET /api/trends`：读取热门菜品灵感
@@ -109,6 +113,17 @@ data/app-state.json
 这个文件已被 `.gitignore` 忽略，避免把个人菜谱数据提交到 Git。
 
 AI 推荐缓存同样会跟随存储方式切换：有数据库时保存到 PostgreSQL，没有数据库时保存到 `data/ai-trends.json`。
+
+### 账号登录
+
+应用现在支持账号注册和账号密码登录：
+
+- 每个账号有自己的菜谱库、周菜单和购物清单。
+- 新账号第一次进入时，会自动带入一份初始菜谱数据。
+- 密码不会明文保存，后端只保存加盐哈希。
+- 登录状态通过 HttpOnly Cookie 保存，默认有效期 30 天。
+
+如果使用 PostgreSQL/Supabase，账号、登录会话和每个账号的应用数据都会保存在数据库里。如果本地没有配置 `DATABASE_URL`，账号数据会保存到 `data/auth.json`，应用数据会保存到每个账号对应的 `data/app-state-*.json`。
 
 ### Supabase / PostgreSQL
 

@@ -31,7 +31,18 @@ import type {
   TrendingDish,
 } from "./types";
 import { TRENDING_DISHES } from "./trending";
-import { fetchAiTrends, fetchAppState, refreshAiTrends, saveAppState, searchAiIngredientTrends } from "./api";
+import {
+  fetchAiTrends,
+  fetchAppState,
+  fetchCurrentUser,
+  loginAccount,
+  logoutAccount,
+  refreshAiTrends,
+  registerAccount,
+  saveAppState,
+  searchAiIngredientTrends,
+  type AuthUser,
+} from "./api";
 
 type Tab = "menu" | "aiTrends" | "trends" | "recipes" | "shopping";
 
@@ -187,6 +198,11 @@ function aiDishToRecipe(dish: AiDishRecommendation): Recipe {
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("menu");
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [isStateLoading, setIsStateLoading] = useState(false);
+  const [hasLoadedUserState, setHasLoadedUserState] = useState(false);
+  const [stateError, setStateError] = useState("");
   const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
   const [weeklyMenu, setWeeklyMenu] = useState(initialWeeklyMenu);
   const [shoppingChecked, setShoppingChecked] = useState<ShoppingCheckedState>(() => loadShoppingChecked());
@@ -276,20 +292,18 @@ function App() {
 
   useEffect(() => {
     let ignore = false;
-    fetchAppState()
-      .then((state) => {
-        if (ignore) {
-          return;
+    fetchCurrentUser()
+      .then((user) => {
+        if (!ignore) {
+          setAuthUser(user);
+          setHasLoadedUserState(false);
         }
-        setRecipes(state.recipes);
-        setWeeklyMenu(state.weeklyMenu);
-        setShoppingChecked(state.shoppingChecked);
-        saveRecipes(state.recipes);
-        saveWeeklyMenu(state.weeklyMenu);
-        saveShoppingChecked(state.shoppingChecked);
       })
-      .catch(() => {
-        // Local-only mode remains usable when the backend is not running.
+      .catch(() => undefined)
+      .finally(() => {
+        if (!ignore) {
+          setIsAuthChecking(false);
+        }
       });
 
     return () => {
@@ -298,6 +312,48 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!authUser) {
+      return;
+    }
+
+    let ignore = false;
+    setHasLoadedUserState(false);
+    setIsStateLoading(true);
+    fetchAppState()
+      .then((state) => {
+        if (ignore) {
+          return;
+        }
+        setRecipes(state.recipes);
+        setWeeklyMenu(state.weeklyMenu);
+        setShoppingChecked(state.shoppingChecked);
+        setStateError("");
+        saveRecipes(state.recipes);
+        saveWeeklyMenu(state.weeklyMenu);
+        saveShoppingChecked(state.shoppingChecked);
+        setHasLoadedUserState(true);
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setStateError(error instanceof Error ? error.message : "读取账号数据失败");
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsStateLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser) {
+      return;
+    }
+
     setIsAiTrendLoading(true);
     fetchAiTrends()
       .then((report) => {
@@ -310,9 +366,13 @@ function App() {
       .finally(() => {
         setIsAiTrendLoading(false);
       });
-  }, []);
+  }, [authUser]);
 
   function syncBackend(nextRecipes = recipes, nextMenu = weeklyMenu, nextChecked = shoppingChecked) {
+    if (!authUser) {
+      return;
+    }
+
     saveAppState({
       recipes: nextRecipes,
       weeklyMenu: nextMenu,
@@ -428,7 +488,25 @@ function App() {
       }),
     };
     persistWeeklyMenu(nextMenu);
+      setActiveTab("menu");
+  }
+
+  function handleAuthSuccess(user: AuthUser) {
+    setHasLoadedUserState(false);
+    setAuthUser(user);
+    setStateError("");
     setActiveTab("menu");
+  }
+
+  function handleLogout() {
+    logoutAccount()
+      .catch(() => undefined)
+      .finally(() => {
+        setAuthUser(null);
+        setHasLoadedUserState(false);
+        setSelectedRecipeId(null);
+        setIsFormOpen(false);
+      });
   }
 
   function pickOneRecommendation() {
@@ -500,6 +578,45 @@ function App() {
       });
   }
 
+  if (isAuthChecking) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <p className="eyebrow">正在进入厨房</p>
+          <h1>正在检查登录状态</h1>
+        </section>
+      </main>
+    );
+  }
+
+  if (!authUser) {
+    return <AuthScreen onSuccess={handleAuthSuccess} />;
+  }
+
+  if (!hasLoadedUserState) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <div className="auth-copy">
+            <p className="eyebrow">账号数据</p>
+            <h1>{stateError ? "暂时没读到你的菜谱" : "正在端出你的晚餐计划"}</h1>
+            <p>{stateError || "正在读取菜谱、周菜单和购物清单。"}</p>
+          </div>
+          <div className="auth-form">
+            <div className={stateError ? "status-banner error" : "status-banner"}>
+              {stateError || "正在加载，请稍等..."}
+            </div>
+            {stateError && (
+              <button className="secondary-button" type="button" onClick={handleLogout}>
+                退出重新登录
+              </button>
+            )}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <div className="app-shell">
       <section className="top-stage" aria-label="晚餐工作台">
@@ -510,14 +627,27 @@ function App() {
           </div>
 
           <div className="header-actions">
+            <div className="account-pill">
+              <span>账号</span>
+              <strong>{authUser.username}</strong>
+            </div>
             <button className="secondary-button" type="button" onClick={refreshWholeWeek}>
               换一周
             </button>
             <button className="primary-button" type="button" onClick={openNewRecipeForm}>
               新增菜谱
             </button>
+            <button className="secondary-button" type="button" onClick={handleLogout}>
+              退出
+            </button>
           </div>
         </header>
+
+        {(isStateLoading || stateError) && (
+          <div className={stateError ? "status-banner error" : "status-banner"}>
+            {stateError || "正在读取你的账号数据..."}
+          </div>
+        )}
 
         <div className="tonight-board">
           <div className="date-ticket">
@@ -998,6 +1128,120 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+interface AuthScreenProps {
+  onSuccess: (user: AuthUser) => void;
+}
+
+function AuthScreen({ onSuccess }: AuthScreenProps) {
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isRegistering = mode === "register";
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+
+    if (isRegistering && password !== confirmPassword) {
+      setError("两次输入的密码不一致。");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const action = isRegistering ? registerAccount(username, password) : loginAccount(username, password);
+    action
+      .then(onSuccess)
+      .catch((submitError) => {
+        setError(submitError instanceof Error ? submitError.message : "账号操作失败");
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
+  }
+
+  function switchMode(nextMode: "login" | "register") {
+    setMode(nextMode);
+    setError("");
+    setConfirmPassword("");
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-card">
+        <div className="auth-copy">
+          <p className="eyebrow">Weekly Dinner Planner</p>
+          <h1>先登录，再安排这一周吃什么</h1>
+          <p>每个账号都会有自己的菜谱库、周菜单和购物清单。注册后会自动带入一份初始菜谱，后面就按你的习惯保存。</p>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="auth-toggle" role="tablist" aria-label="登录或注册">
+            <button
+              className={!isRegistering ? "active" : ""}
+              type="button"
+              onClick={() => switchMode("login")}
+              aria-selected={!isRegistering}
+            >
+              登录
+            </button>
+            <button
+              className={isRegistering ? "active" : ""}
+              type="button"
+              onClick={() => switchMode("register")}
+              aria-selected={isRegistering}
+            >
+              注册
+            </button>
+          </div>
+
+          <label>
+            <span>账号名</span>
+            <input
+              autoComplete="username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="例如：humanduo"
+            />
+          </label>
+
+          <label>
+            <span>密码</span>
+            <input
+              autoComplete={isRegistering ? "new-password" : "current-password"}
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="至少 6 位"
+            />
+          </label>
+
+          {isRegistering && (
+            <label>
+              <span>确认密码</span>
+              <input
+                autoComplete="new-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="再输入一次密码"
+              />
+            </label>
+          )}
+
+          {error && <p className="form-error">{error}</p>}
+
+          <button className="primary-button" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "处理中..." : isRegistering ? "创建账号" : "登录"}
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }
 

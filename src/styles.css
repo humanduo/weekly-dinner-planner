@@ -76,6 +76,129 @@ a {
   padding: 24px 0 52px;
 }
 
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 22px;
+}
+
+.auth-card {
+  display: grid;
+  grid-template-columns: minmax(380px, 1fr) minmax(340px, 440px);
+  gap: 26px;
+  width: min(980px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 26px;
+  background:
+    linear-gradient(135deg, rgba(255, 250, 240, 0.98), rgba(232, 244, 236, 0.96)),
+    #ffffff;
+  box-shadow: 0 24px 70px var(--shadow);
+}
+
+.auth-copy {
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  min-height: 360px;
+  border: 1px solid #e5ddcf;
+  border-radius: 8px;
+  padding: 24px;
+  background:
+    linear-gradient(110deg, rgba(255, 240, 191, 0.72), transparent 58%),
+    #fffdf7;
+}
+
+.auth-copy h1 {
+  max-width: 560px;
+  margin: 0;
+  color: var(--ink);
+  font-family: "Songti SC", "STSong", "Hiragino Mincho ProN", serif;
+  font-size: clamp(2rem, 3.8vw, 3.45rem);
+  line-height: 1.08;
+}
+
+.auth-copy p:last-child {
+  max-width: 560px;
+  margin: 0;
+  color: #65726b;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.auth-form {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+}
+
+.auth-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px;
+  background: #ffffff;
+}
+
+.auth-toggle button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 900;
+}
+
+.auth-toggle button.active {
+  background: var(--mint-strong);
+  color: #1f4034;
+}
+
+.account-pill {
+  display: grid;
+  min-height: 40px;
+  align-content: center;
+  border: 1px solid #d6e1d7;
+  border-radius: 8px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.account-pill span {
+  color: #69766f;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.account-pill strong {
+  color: var(--ink);
+  font-size: 0.94rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.status-banner {
+  position: relative;
+  z-index: 1;
+  margin: -4px 0 14px;
+  border: 1px solid #d6e1d7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f2fbf4;
+  color: #2f614b;
+  font-weight: 900;
+}
+
+.status-banner.error {
+  border-color: #f1c8bd;
+  background: #fff3ef;
+  color: #a33b2f;
+}
+
 .top-stage {
   position: relative;
   overflow: hidden;
@@ -1256,6 +1379,7 @@ a:focus-visible {
   .week-grid,
   .trend-grid,
   .ai-cuisine-grid,
+  .auth-card,
   .filters,
   .ai-ingredient-search,
   .form-grid,
@@ -1281,8 +1405,14 @@ a:focus-visible {
   }
 
   .panel,
+  .auth-card,
+  .auth-copy,
   .modal-card {
     padding: 16px;
+  }
+
+  .auth-copy {
+    min-height: 250px;
   }
 
   .recipe-actions {

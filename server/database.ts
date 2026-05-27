@@ -1,4 +1,5 @@
 import pg from "pg";
+import type { QueryResult, QueryResultRow } from "pg";
 
 const { Pool } = pg;
 
@@ -64,4 +65,12 @@ export async function writeDbJson(key: string, value: unknown): Promise<void> {
     `,
     [key, JSON.stringify(value)],
   );
+}
+
+export async function queryDb<T extends QueryResultRow = QueryResultRow>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<QueryResult<T>> {
+  await ensureTable();
+  return getPool().query<T>(sql, params);
 }

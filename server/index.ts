@@ -7,6 +7,15 @@ import { fileURLToPath } from "node:url";
 import { generateWeeklyMenu, getWeekStart } from "../src/menuGenerator";
 import { sampleRecipes } from "../src/storage";
 import { TRENDING_DISHES } from "../src/trending";
+import {
+  attachSession,
+  getRequestUser,
+  loginWithPassword,
+  logoutRequest,
+  registerWithPassword,
+  requireAuth,
+  type AuthenticatedRequest,
+} from "./auth";
 import { createAiTrendStore } from "./aiTrends";
 import { getStorageMode, isDatabaseEnabled, readDbJson, writeDbJson } from "./database";
 import type { AiTrendReport, AppState, Recipe, ShoppingCheckedState, WeeklyMenu } from "../src/types";
@@ -33,6 +42,14 @@ const aiTrendStore = createAiTrendStore(
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+
+function userStateKey(userId: string) {
+  return `${APP_STATE_KEY}:${userId}`;
+}
+
+function userStateFile(userId: string) {
+  return join(dataDir, `app-state-${userId}.json`);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -89,43 +106,63 @@ async function createDefaultState(): Promise<AppState> {
   };
 }
 
-async function readFileState(): Promise<AppState | null> {
-  if (!existsSync(dataFile)) {
+async function readFileState(filePath = dataFile): Promise<AppState | null> {
+  if (!existsSync(filePath)) {
     return null;
   }
-  const raw = await readFile(dataFile, "utf-8");
+  const raw = await readFile(filePath, "utf-8");
   return normalizeState(JSON.parse(raw));
 }
 
-async function writeFileState(state: AppState): Promise<void> {
+async function writeFileState(state: AppState, filePath = dataFile): Promise<void> {
   await mkdir(dataDir, { recursive: true });
-  await writeFile(dataFile, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
+  await writeFile(filePath, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
 }
 
-async function readSavedState(): Promise<AppState | null> {
-  if (!isDatabaseEnabled()) {
-    return readFileState();
+async function readLegacyState(): Promise<AppState | null> {
+  if (isDatabaseEnabled()) {
+    const legacy = await readDbJson<unknown>(APP_STATE_KEY);
+    if (legacy) {
+      return normalizeState(legacy);
+    }
   }
 
-  const saved = await readDbJson<unknown>(APP_STATE_KEY);
+  return readFileState();
+}
+
+async function readSavedState(userId: string): Promise<AppState | null> {
+  if (!isDatabaseEnabled()) {
+    const fileState = await readFileState(userStateFile(userId));
+    if (fileState) {
+      return fileState;
+    }
+
+    const legacyState = await readLegacyState();
+    if (legacyState) {
+      await writeFileState(legacyState, userStateFile(userId));
+    }
+    return legacyState;
+  }
+
+  const saved = await readDbJson<unknown>(userStateKey(userId));
   if (saved) {
     return normalizeState(saved);
   }
 
-  const fileState = await readFileState();
-  if (fileState) {
-    await writeDbJson(APP_STATE_KEY, fileState);
+  const legacyState = await readLegacyState();
+  if (legacyState) {
+    await writeDbJson(userStateKey(userId), legacyState);
   }
-  return fileState;
+  return legacyState;
 }
 
-async function readState(): Promise<AppState> {
-  const savedState = await readSavedState();
+async function readState(userId: string): Promise<AppState> {
+  const savedState = await readSavedState(userId);
   const state = savedState ?? (await createDefaultState());
   const currentWeekStart = getWeekStart();
 
   if (!savedState) {
-    await writeState(state);
+    await writeUserState(userId, state);
   }
 
   if (state.weeklyMenu.weekStart !== currentWeekStart) {
@@ -134,20 +171,20 @@ async function readState(): Promise<AppState> {
       weeklyMenu: generateWeeklyMenu(state.recipes, currentWeekStart),
       shoppingChecked: {},
     };
-    await writeState(nextState);
+    await writeUserState(userId, nextState);
     return nextState;
   }
 
   return state;
 }
 
-async function writeState(state: AppState): Promise<void> {
+async function writeUserState(userId: string, state: AppState): Promise<void> {
   if (isDatabaseEnabled()) {
-    await writeDbJson(APP_STATE_KEY, state);
+    await writeDbJson(userStateKey(userId), state);
     return;
   }
 
-  await writeFileState(state);
+  await writeFileState(state, userStateFile(userId));
 }
 
 app.get("/api/health", (_request, response) => {
@@ -159,18 +196,59 @@ app.get("/api/health", (_request, response) => {
   });
 });
 
-app.get("/api/state", async (_request, response) => {
+app.get("/api/auth/me", async (request, response) => {
   try {
-    response.json(await readState());
+    response.json({ user: await getRequestUser(request) });
+  } catch (error) {
+    response.status(500).json({ error: error instanceof Error ? error.message : "Failed to read current user" });
+  }
+});
+
+app.post("/api/auth/register", async (request, response) => {
+  try {
+    const username = typeof request.body?.username === "string" ? request.body.username : "";
+    const password = typeof request.body?.password === "string" ? request.body.password : "";
+    const { user, token } = await registerWithPassword(username, password);
+    attachSession(response, token);
+    response.status(201).json({ user });
+  } catch (error) {
+    response.status(400).json({ error: error instanceof Error ? error.message : "注册失败" });
+  }
+});
+
+app.post("/api/auth/login", async (request, response) => {
+  try {
+    const username = typeof request.body?.username === "string" ? request.body.username : "";
+    const password = typeof request.body?.password === "string" ? request.body.password : "";
+    const { user, token } = await loginWithPassword(username, password);
+    attachSession(response, token);
+    response.json({ user });
+  } catch (error) {
+    response.status(401).json({ error: error instanceof Error ? error.message : "登录失败" });
+  }
+});
+
+app.post("/api/auth/logout", async (request, response) => {
+  try {
+    await logoutRequest(request, response);
+    response.json({ ok: true });
+  } catch (error) {
+    response.status(500).json({ error: error instanceof Error ? error.message : "退出失败" });
+  }
+});
+
+app.get("/api/state", requireAuth, async (request, response) => {
+  try {
+    response.json(await readState((request as AuthenticatedRequest).user.id));
   } catch (error) {
     response.status(500).json({ error: error instanceof Error ? error.message : "Failed to read state" });
   }
 });
 
-app.put("/api/state", async (request, response) => {
+app.put("/api/state", requireAuth, async (request, response) => {
   try {
     const state = normalizeState(request.body);
-    await writeState(state);
+    await writeUserState((request as AuthenticatedRequest).user.id, state);
     response.json(state);
   } catch (error) {
     response.status(400).json({ error: error instanceof Error ? error.message : "Invalid state payload" });
