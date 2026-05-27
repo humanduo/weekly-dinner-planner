@@ -5,6 +5,11 @@ import type { AiCuisineGroup, AiTrendReport } from "../src/types";
 
 const REFRESH_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000;
 
+interface AiTrendPersistence {
+  read(): Promise<AiTrendReport | null>;
+  write(report: AiTrendReport): Promise<void>;
+}
+
 const fallbackGroups: AiCuisineGroup[] = [
   {
     country: "中国",
@@ -366,11 +371,23 @@ async function fetchDeepSeekIngredientReport(ingredient: string): Promise<AiTren
   return normalizeReport(JSON.parse(extractJson(outputText)));
 }
 
-export function createAiTrendStore(filePath: string) {
+export function createAiTrendStore(filePath: string, persistence?: AiTrendPersistence) {
   let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
+  async function readSavedReport() {
+    return persistence ? persistence.read() : readJson<AiTrendReport>(filePath);
+  }
+
+  async function writeSavedReport(report: AiTrendReport) {
+    if (persistence) {
+      await persistence.write(report);
+      return;
+    }
+    await writeJson(filePath, report);
+  }
+
   async function getReport(): Promise<AiTrendReport> {
-    const saved = await readJson<AiTrendReport>(filePath);
+    const saved = await readSavedReport();
     if (!saved) {
       return refreshReport(false);
     }
@@ -385,15 +402,15 @@ export function createAiTrendStore(filePath: string) {
   async function refreshReport(force = true): Promise<AiTrendReport> {
     try {
       const report = await fetchDeepSeekTrendReport();
-      await writeJson(filePath, report);
+      await writeSavedReport(report);
       return report;
     } catch (error) {
-      const saved = await readJson<AiTrendReport>(filePath);
+      const saved = await readSavedReport();
       if (saved && !force) {
         return saved;
       }
       const report = fallbackReport(error instanceof Error ? error.message : "AI 热门推荐刷新失败。");
-      await writeJson(filePath, report);
+      await writeSavedReport(report);
       return report;
     }
   }

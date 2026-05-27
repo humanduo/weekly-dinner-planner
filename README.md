@@ -95,13 +95,35 @@ data/ai-trends.json
 
 ## 数据存储
 
-后端会把数据保存到：
+后端支持两种保存方式：
+
+- 配置了 `DATABASE_URL`：保存到 PostgreSQL/Supabase，适合线上多人访问。
+- 没配置 `DATABASE_URL`：保存到本机文件，适合本地个人使用。
+
+本地文件路径是：
 
 ```text
 data/app-state.json
 ```
 
 这个文件已被 `.gitignore` 忽略，避免把个人菜谱数据提交到 Git。
+
+AI 推荐缓存同样会跟随存储方式切换：有数据库时保存到 PostgreSQL，没有数据库时保存到 `data/ai-trends.json`。
+
+### Supabase / PostgreSQL
+
+如果你已经创建了 Supabase 项目，把 Supabase 的连接字符串填到环境变量：
+
+```bash
+DATABASE_URL=postgresql://...
+```
+
+注意：
+
+- 连接字符串里不要保留 `[YOUR-PASSWORD]` 这种占位符，要替换成真实数据库密码。
+- 不要把 `DATABASE_URL` 写进 Git，也不要发在聊天或截图里。
+- 后端第一次启动时会自动创建 `app_kv` 表，用来保存菜谱、菜单、购物清单和 AI 推荐缓存。
+- `/api/health` 会返回当前存储方式，`storage: "postgres"` 表示已经在用数据库。
 
 ## Docker 部署
 
@@ -128,9 +150,10 @@ http://127.0.0.1:8787
 2. 选择 GitHub 仓库 `humanduo/weekly-dinner-planner`
 3. Render 会读取 `render.yaml`
 4. 在创建流程里填写 `DEEPSEEK_API_KEY`
-5. 创建后等待部署完成，访问 Render 给出的 `onrender.com` 地址
+5. 如果要长期保存线上数据，填写 `DATABASE_URL`
+6. 创建后等待部署完成，访问 Render 给出的 `onrender.com` 地址
 
-当前配置使用 Render 免费 Web Service，适合先分享和试用。免费服务会在一段时间无访问后休眠，首次打开可能需要等待约一分钟；免费服务的文件系统也是临时的，重启或重新部署后 `data/*.json` 可能重置。若要长期保存多人数据，可以升级为带 Persistent Disk 的付费服务，或后续改成 PostgreSQL 数据库。
+当前配置使用 Render 免费 Web Service，适合先分享和试用。免费服务会在一段时间无访问后休眠，首次打开可能需要等待约一分钟；如果已配置 `DATABASE_URL`，数据会保存到 Supabase/PostgreSQL，不受 Render 免费服务临时文件系统影响。
 
 Render 配置：
 
@@ -141,6 +164,7 @@ Render 配置：
 - Environment Variables:
   - `DEEPSEEK_API_KEY`: 在 Render 控制台填写，不要提交到 Git
   - `DEEPSEEK_MODEL`: `deepseek-v4-flash`
+  - `DATABASE_URL`: Supabase/PostgreSQL 连接字符串，不要提交到 Git
 
 ### 通用 Node.js 平台
 
@@ -149,5 +173,6 @@ Render 配置：
 - Environment Variables:
   - `PORT`: 云平台通常会自动注入
   - `DATA_DIR`: 可选，默认 `./data`
+  - `DATABASE_URL`: 可选，配置后使用 PostgreSQL 保存数据
 
-如果要长期保存数据，请选择带持久磁盘的服务，并把 `DATA_DIR` 指向持久磁盘路径。
+如果不使用数据库但要长期保存数据，请选择带持久磁盘的服务，并把 `DATA_DIR` 指向持久磁盘路径。

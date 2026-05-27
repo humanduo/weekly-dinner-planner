@@ -8,7 +8,8 @@ import { generateWeeklyMenu, getWeekStart } from "../src/menuGenerator";
 import { sampleRecipes } from "../src/storage";
 import { TRENDING_DISHES } from "../src/trending";
 import { createAiTrendStore } from "./aiTrends";
-import type { AppState, Recipe, ShoppingCheckedState, WeeklyMenu } from "../src/types";
+import { getStorageMode, isDatabaseEnabled, readDbJson, writeDbJson } from "./database";
+import type { AiTrendReport, AppState, Recipe, ShoppingCheckedState, WeeklyMenu } from "../src/types";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -18,7 +19,17 @@ const dataFile = join(dataDir, "app-state.json");
 const aiTrendFile = join(dataDir, "ai-trends.json");
 const port = Number(process.env.PORT ?? 8787);
 const host = process.env.HOST ?? "0.0.0.0";
-const aiTrendStore = createAiTrendStore(aiTrendFile);
+const APP_STATE_KEY = "app-state";
+const AI_TRENDS_KEY = "ai-trends";
+const aiTrendStore = createAiTrendStore(
+  aiTrendFile,
+  isDatabaseEnabled()
+    ? {
+        read: () => readDbJson<AiTrendReport>(AI_TRENDS_KEY),
+        write: (report) => writeDbJson(AI_TRENDS_KEY, report),
+      }
+    : undefined,
+);
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -78,16 +89,44 @@ async function createDefaultState(): Promise<AppState> {
   };
 }
 
-async function readState(): Promise<AppState> {
+async function readFileState(): Promise<AppState | null> {
   if (!existsSync(dataFile)) {
-    const state = await createDefaultState();
-    await writeState(state);
-    return state;
+    return null;
+  }
+  const raw = await readFile(dataFile, "utf-8");
+  return normalizeState(JSON.parse(raw));
+}
+
+async function writeFileState(state: AppState): Promise<void> {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(dataFile, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
+}
+
+async function readSavedState(): Promise<AppState | null> {
+  if (!isDatabaseEnabled()) {
+    return readFileState();
   }
 
-  const raw = await readFile(dataFile, "utf-8");
-  const state = normalizeState(JSON.parse(raw));
+  const saved = await readDbJson<unknown>(APP_STATE_KEY);
+  if (saved) {
+    return normalizeState(saved);
+  }
+
+  const fileState = await readFileState();
+  if (fileState) {
+    await writeDbJson(APP_STATE_KEY, fileState);
+  }
+  return fileState;
+}
+
+async function readState(): Promise<AppState> {
+  const savedState = await readSavedState();
+  const state = savedState ?? (await createDefaultState());
   const currentWeekStart = getWeekStart();
+
+  if (!savedState) {
+    await writeState(state);
+  }
 
   if (state.weeklyMenu.weekStart !== currentWeekStart) {
     const nextState = {
@@ -103,12 +142,21 @@ async function readState(): Promise<AppState> {
 }
 
 async function writeState(state: AppState): Promise<void> {
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(dataFile, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
+  if (isDatabaseEnabled()) {
+    await writeDbJson(APP_STATE_KEY, state);
+    return;
+  }
+
+  await writeFileState(state);
 }
 
 app.get("/api/health", (_request, response) => {
-  response.json({ ok: true, service: "weekly-dinner-planner", time: new Date().toISOString() });
+  response.json({
+    ok: true,
+    service: "weekly-dinner-planner",
+    storage: getStorageMode(),
+    time: new Date().toISOString(),
+  });
 });
 
 app.get("/api/state", async (_request, response) => {

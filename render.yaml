@@ -16,6 +16,8 @@ services:
         value: 0.0.0.0
       - key: DATA_DIR
         value: /opt/render/project/src/data
+      - key: DATABASE_URL
+        sync: false
       - key: DEEPSEEK_MODEL
         value: deepseek-v4-flash
       - key: DEEPSEEK_API_KEY
