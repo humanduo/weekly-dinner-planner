@@ -31,6 +31,7 @@ import type {
   TrendingDish,
 } from "./types";
 import { TRENDING_DISHES } from "./trending";
+import { buildTrendingDishBatch } from "./trendBatch";
 import {
   fetchAiTrends,
   fetchAppState,
@@ -135,12 +136,6 @@ function scoreRecipesByIngredients(recipes: Recipe[], selectedIngredients: strin
 function getWeeklyTrendScore(dish: TrendingDish, weekStart: string) {
   const seed = [...`${dish.id}-${weekStart}`].reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return dish.heat + (seed % 9);
-}
-
-function getTrendBatchScore(dish: TrendingDish, weekStart: string, refreshSeed: number, likedCreators: string[]) {
-  const seed = [...`${dish.id}-${weekStart}-${refreshSeed}`].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const likedBoost = likedCreators.includes(dish.creator) ? 120 : 0;
-  return dish.heat + likedBoost + (seed % 47);
 }
 
 function getSourceSearchUrl(source: TrendingDish["source"], keyword: string) {
@@ -271,15 +266,7 @@ function App() {
     [recipes, selectedIngredients],
   );
   const weeklyTrends = useMemo(
-    () =>
-      [...TRENDING_DISHES]
-        .sort(
-          (a, b) =>
-            getTrendBatchScore(b, weeklyMenu.weekStart, trendRefreshSeed, likedTrendCreators) -
-              getTrendBatchScore(a, weeklyMenu.weekStart, trendRefreshSeed, likedTrendCreators) ||
-            a.creator.localeCompare(b.creator, "zh-CN"),
-        )
-        .slice(0, 6),
+    () => buildTrendingDishBatch(TRENDING_DISHES, weeklyMenu.weekStart, trendRefreshSeed, likedTrendCreators),
     [likedTrendCreators, trendRefreshSeed, weeklyMenu.weekStart],
   );
   const likedTrendSet = useMemo(() => new Set(likedTrendCreators), [likedTrendCreators]);
