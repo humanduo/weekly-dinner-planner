@@ -191,7 +191,7 @@ function aiDishToRecipe(dish: AiDishRecommendation): Recipe {
     rating: 0,
     cookedCount: 0,
     servings: "2人",
-    tips: `${dish.country} · ${dish.cuisine}：${dish.reason}`,
+    tips: `${dish.country} / ${dish.cuisine}：${dish.reason}`,
     substitutes: `推荐搜索词：${dish.sourceKeywords.join(" / ")}`,
   };
 }
@@ -622,7 +622,7 @@ function App() {
       <section className="top-stage" aria-label="晚餐工作台">
         <header className="app-header">
           <div className="brand-lockup">
-            <p className="eyebrow">Kitchen Dispatch · {weeklyMenu.weekStart}</p>
+            <p className="eyebrow">本周计划 / {weeklyMenu.weekStart}</p>
             <h1>周晚餐备餐台</h1>
           </div>
 
@@ -661,7 +661,7 @@ function App() {
           <div className="stat-strip" aria-label="当前数据概览">
             <span>
               <strong>{recipes.length}</strong>
-              本地菜谱
+              我的菜谱
             </span>
             <span>
               <strong>{favoriteCount}</strong>
@@ -820,7 +820,7 @@ function App() {
                         <strong>{recipe.name}</strong>
                         <span>命中：{matchedIngredients.join("、")}</span>
                         <small>
-                          {recipe.taste} · {recipe.difficulty} · {recipe.cookTime}分钟
+                          {recipe.taste} / {recipe.difficulty} / {recipe.cookTime}分钟
                         </small>
                       </button>
                       <button className="small-primary-button" type="button" onClick={() => addRecipeToToday(recipe.id)}>
@@ -838,7 +838,7 @@ function App() {
           <section className="panel trends-panel">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">每 2 天自动刷新 · 按国家菜系分组</p>
+                <p className="eyebrow">每 2 天自动刷新 / 按国家菜系分组</p>
                 <h2>DeepSeek 菜系推荐</h2>
               </div>
               <button className="secondary-button" type="button" onClick={handleRefreshAiTrends} disabled={isAiTrendLoading}>
@@ -900,7 +900,7 @@ function App() {
           <section className="panel trends-panel">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">B站 / 小红书 · 高热创作者方向</p>
+                <p className="eyebrow">B站 / 小红书热门创作者</p>
                 <h2>UP主热门菜灵感</h2>
               </div>
               <div className="trend-heading-actions">
@@ -941,7 +941,7 @@ function App() {
                     <div className="trend-card-main">
                       <div className="trend-card-header">
                         <div>
-                          <p className="eyebrow">{dish.source} · 热度 {getWeeklyTrendScore(dish, weeklyMenu.weekStart)}</p>
+                          <p className="eyebrow">{dish.source} / 热度 {getWeeklyTrendScore(dish, weeklyMenu.weekStart)}</p>
                           <h3>{dish.name}</h3>
                         </div>
                         <span>{dish.cookTime}分钟</span>
@@ -1054,10 +1054,10 @@ function App() {
                     <button className="recipe-main" type="button" onClick={() => setSelectedRecipeId(recipe.id)}>
                       <strong>{recipe.name}</strong>
                       <span>
-                        {recipe.category} · {recipe.taste} · {recipe.difficulty} · {recipe.cookTime}分钟
+                        {recipe.category} / {recipe.taste} / {recipe.difficulty} / {recipe.cookTime}分钟
                       </span>
                       <span>
-                        评分 {recipe.rating || "未评"} / 5 · 做过 {recipe.cookedCount} 次
+                        评分 {recipe.rating || "未评"} / 5，做过 {recipe.cookedCount} 次
                       </span>
                     </button>
                     <div className="recipe-actions">
@@ -1260,7 +1260,7 @@ function RecipeDetail({ recipe, onClose, onEdit, onFavorite, onCooked }: RecipeD
         <div className="modal-header">
           <div>
             <p className="eyebrow">
-              {recipe.category} · {recipe.taste}
+              {recipe.category} / {recipe.taste}
             </p>
             <h2 id="recipe-detail-title">{recipe.name}</h2>
           </div>
