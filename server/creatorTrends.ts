@@ -1,7 +1,20 @@
 import type { CreatorTrendReport, Ingredient, TrendingDish } from "../src/types";
 import { TRENDING_DISHES } from "../src/trending";
 
-const DEFAULT_CREATORS = ["老饭骨", "美食作家王刚R", "曼食慢语", "绵羊料理", "日食记", "小高姐的 Magic Ingredients"];
+const DEFAULT_CREATORS = [
+  "老饭骨",
+  "美食作家王刚R",
+  "曼食慢语",
+  "绵羊料理",
+  "日食记",
+  "小高姐的 Magic Ingredients",
+  "滇西小哥",
+  "懒饭",
+  "Amanda的小厨房",
+  "詹姆士的厨房",
+  "大师的菜",
+  "马壮实Hera",
+];
 const SEARCH_ENDPOINT = "https://api.bochaai.com/v1/web-search";
 const ALLOWED_SOURCE_HOSTS = ["bilibili.com", "xiaohongshu.com", "douyin.com"];
 
@@ -34,7 +47,7 @@ function normalizeCreators(creators: unknown) {
   const cleaned = creators
     .map((creator) => cleanText(creator))
     .filter(Boolean)
-    .slice(0, 8);
+    .slice(0, 12);
   return cleaned.length > 0 ? Array.from(new Set(cleaned)) : DEFAULT_CREATORS;
 }
 
@@ -87,7 +100,7 @@ async function searchCreatorVideos(creator: string, searchApiKey: string) {
       query: `${creator} 做饭 菜谱 site:bilibili.com OR site:xiaohongshu.com OR site:douyin.com`,
       freshness: "oneMonth",
       summary: true,
-      count: 8,
+      count: 10,
     }),
   });
 
@@ -139,7 +152,7 @@ async function organizeSearchResults(results: Awaited<ReturnType<typeof searchCr
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-v4-flash";
   const prompt = `你是一位晚餐菜谱编辑。下面是刚刚从公开网页搜索得到的创作者视频结果。请只从这些结果中整理适合家庭晚餐的菜品，不要杜撰搜索结果里不存在的视频链接。
 
-每一道菜都要保留一个真实来源链接。优先保留明确是做菜教程的视频；忽略探店、吃播、纯综艺内容。相似菜只保留一条。最多返回 30 道。
+每一道菜都要保留一个真实来源链接。优先保留明确是做菜教程的视频；忽略探店、吃播、纯综艺内容。相似菜只保留一条。最多返回 48 道。
 
 搜索结果：
 ${JSON.stringify(flattened, null, 2)}

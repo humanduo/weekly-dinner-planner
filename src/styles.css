@@ -1961,6 +1961,36 @@ button:active,
   min-height: 40px;
 }
 
+.creator-suggestion-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: -2px 0 12px;
+}
+
+.creator-suggestion-strip span {
+  margin-right: 2px;
+  color: #6f7f78;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.creator-suggestion-strip button {
+  border: 1px solid #d6e3dd;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #ffffff;
+  color: #40685a;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.creator-suggestion-strip button:hover {
+  border-color: #9dbfb2;
+  background: #f0f7f4;
+}
+
 .filters,
 .form-grid {
   gap: 10px;

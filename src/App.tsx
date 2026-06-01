@@ -286,6 +286,10 @@ function App() {
   const trendBatchCount = Math.max(1, Math.ceil(activeTrendPool.length / 6));
   const trendBatchNumber = (trendRefreshSeed % trendBatchCount) + 1;
   const likedTrendSet = useMemo(() => new Set(likedTrendCreators), [likedTrendCreators]);
+  const suggestedTrendCreators = useMemo(
+    () => Array.from(new Set(TRENDING_DISHES.map((dish) => dish.creator))).filter((creator) => !likedTrendSet.has(creator)).slice(0, 12),
+    [likedTrendSet],
+  );
   const aiDishCount = aiTrendReport?.groups.reduce((sum, group) => sum + group.dishes.length, 0) ?? 0;
   const todayMenuDate = getTodayMenuDate(weeklyMenu.dailyMenu.map((day) => day.date));
   const todayMenuDay = weeklyMenu.dailyMenu.find((day) => day.date === todayMenuDate) ?? weeklyMenu.dailyMenu[0];
@@ -545,12 +549,16 @@ function App() {
     if (!creator) {
       return;
     }
+    addTrendCreatorLike(creator);
+    setCreatorTrendInput("");
+  }
+
+  function addTrendCreatorLike(creator: string) {
     setLikedTrendCreators((current) => {
       const next = current.includes(creator) ? current : [creator, ...current];
       saveLikedTrendCreators(next);
       return next;
     });
-    setCreatorTrendInput("");
   }
 
   function handleRefreshCreatorTrends() {
@@ -975,6 +983,16 @@ function App() {
                 加入关注
               </button>
             </form>
+            {suggestedTrendCreators.length > 0 && (
+              <div className="creator-suggestion-strip" aria-label="推荐关注的创作者">
+                <span>推荐关注</span>
+                {suggestedTrendCreators.map((creator) => (
+                  <button type="button" key={creator} onClick={() => addTrendCreatorLike(creator)}>
+                    + {creator}
+                  </button>
+                ))}
+              </div>
+            )}
             {creatorTrendError && <p className="form-error">{creatorTrendError}</p>}
 
             <div className="trend-note">
