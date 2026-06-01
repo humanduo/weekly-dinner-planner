@@ -31,7 +31,6 @@ export function buildTrendingDishBatch(
   const weeklyDeck = [...dishes].sort(
     (a, b) =>
       hashText(`${weekStart}:${a.id}`) - hashText(`${weekStart}:${b.id}`) ||
-      b.heat - a.heat ||
       a.name.localeCompare(b.name, "zh-CN"),
   );
   const likedDeck = weeklyDeck.filter((dish) => likedSet.has(dish.creator));

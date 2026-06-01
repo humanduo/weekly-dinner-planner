@@ -1,4 +1,4 @@
-import type { AiTrendReport, AppState } from "./types";
+import type { AiTrendReport, AppState, CreatorTrendReport } from "./types";
 
 export interface AuthUser {
   id: string;
@@ -73,5 +73,12 @@ export async function searchAiIngredientTrends(ingredient: string): Promise<AiTr
   return request<AiTrendReport>("/api/ai-trends/ingredient", {
     method: "POST",
     body: JSON.stringify({ ingredient }),
+  });
+}
+
+export async function refreshCreatorTrends(creators: string[]): Promise<CreatorTrendReport> {
+  return request<CreatorTrendReport>("/api/creator-trends/refresh", {
+    method: "POST",
+    body: JSON.stringify({ creators }),
   });
 }

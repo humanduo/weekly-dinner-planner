@@ -17,6 +17,7 @@ import {
   type AuthenticatedRequest,
 } from "./auth";
 import { createAiTrendStore } from "./aiTrends";
+import { refreshCreatorTrendReport } from "./creatorTrends";
 import { getStorageMode, isDatabaseEnabled, readDbJson, writeDbJson } from "./database";
 import type { AiTrendReport, AppState, Recipe, ShoppingCheckedState, WeeklyMenu } from "../src/types";
 
@@ -257,6 +258,14 @@ app.put("/api/state", requireAuth, async (request, response) => {
 
 app.get("/api/trends", (_request, response) => {
   response.json({ items: TRENDING_DISHES });
+});
+
+app.post("/api/creator-trends/refresh", requireAuth, async (request, response) => {
+  try {
+    response.json(await refreshCreatorTrendReport(request.body?.creators));
+  } catch (error) {
+    response.status(500).json({ error: error instanceof Error ? error.message : "Failed to refresh creator trends" });
+  }
 });
 
 app.get("/api/ai-trends", async (_request, response) => {

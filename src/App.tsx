@@ -11,10 +11,12 @@ import {
 } from "./menuGenerator";
 import {
   loadLikedTrendCreators,
+  loadLastUsername,
   loadRecipes,
   loadShoppingChecked,
   loadWeeklyMenu,
   saveLikedTrendCreators,
+  saveLastUsername,
   saveRecipes,
   saveShoppingChecked,
   saveWeeklyMenu,
@@ -28,6 +30,7 @@ import type {
   ShoppingCheckedState,
   AiTrendReport,
   AiDishRecommendation,
+  CreatorTrendReport,
   TrendingDish,
 } from "./types";
 import { TRENDING_DISHES } from "./trending";
@@ -39,6 +42,7 @@ import {
   loginAccount,
   logoutAccount,
   refreshAiTrends,
+  refreshCreatorTrends,
   registerAccount,
   saveAppState,
   searchAiIngredientTrends,
@@ -133,11 +137,6 @@ function scoreRecipesByIngredients(recipes: Recipe[], selectedIngredients: strin
     .sort((a, b) => b.score - a.score || a.recipe.cookTime - b.recipe.cookTime || a.recipe.name.localeCompare(b.recipe.name));
 }
 
-function getWeeklyTrendScore(dish: TrendingDish, weekStart: string) {
-  const seed = [...`${dish.id}-${weekStart}`].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return dish.heat + (seed % 9);
-}
-
 function getSourceSearchUrl(source: TrendingDish["source"], keyword: string) {
   const encoded = encodeURIComponent(keyword);
   if (source === "B站") {
@@ -145,6 +144,9 @@ function getSourceSearchUrl(source: TrendingDish["source"], keyword: string) {
   }
   if (source === "小红书") {
     return `https://www.xiaohongshu.com/search_result?keyword=${encoded}`;
+  }
+  if (source === "抖音") {
+    return `https://www.douyin.com/search/${encoded}`;
   }
   return `https://www.xiaohongshu.com/search_result?keyword=${encoded}`;
 }
@@ -216,6 +218,10 @@ function App() {
   const [isIngredientSearchLoading, setIsIngredientSearchLoading] = useState(false);
   const [ingredientSearchError, setIngredientSearchError] = useState("");
   const [trendRefreshSeed, setTrendRefreshSeed] = useState(0);
+  const [creatorTrendReport, setCreatorTrendReport] = useState<CreatorTrendReport | null>(null);
+  const [creatorTrendInput, setCreatorTrendInput] = useState("");
+  const [isCreatorTrendLoading, setIsCreatorTrendLoading] = useState(false);
+  const [creatorTrendError, setCreatorTrendError] = useState("");
   const [likedTrendCreators, setLikedTrendCreators] = useState<string[]>(() => loadLikedTrendCreators());
 
   const recipeMap = useMemo(() => new Map(recipes.map((recipe) => [recipe.id, recipe])), [recipes]);
@@ -266,9 +272,19 @@ function App() {
     [recipes, selectedIngredients],
   );
   const weeklyTrends = useMemo(
-    () => buildTrendingDishBatch(TRENDING_DISHES, weeklyMenu.weekStart, trendRefreshSeed, likedTrendCreators),
-    [likedTrendCreators, trendRefreshSeed, weeklyMenu.weekStart],
+    () =>
+      buildTrendingDishBatch(
+        creatorTrendReport?.items.length ? creatorTrendReport.items : TRENDING_DISHES,
+        weeklyMenu.weekStart,
+        trendRefreshSeed,
+        likedTrendCreators,
+      ),
+    [creatorTrendReport, likedTrendCreators, trendRefreshSeed, weeklyMenu.weekStart],
   );
+  const activeTrendPool = creatorTrendReport?.items.length ? creatorTrendReport.items : TRENDING_DISHES;
+  const trendCreatorCount = new Set(activeTrendPool.map((dish) => dish.creator)).size;
+  const trendBatchCount = Math.max(1, Math.ceil(activeTrendPool.length / 6));
+  const trendBatchNumber = (trendRefreshSeed % trendBatchCount) + 1;
   const likedTrendSet = useMemo(() => new Set(likedTrendCreators), [likedTrendCreators]);
   const aiDishCount = aiTrendReport?.groups.reduce((sum, group) => sum + group.dishes.length, 0) ?? 0;
   const todayMenuDate = getTodayMenuDate(weeklyMenu.dailyMenu.map((day) => day.date));
@@ -521,6 +537,32 @@ function App() {
       saveLikedTrendCreators(next);
       return next;
     });
+  }
+
+  function followTrendCreator(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const creator = creatorTrendInput.trim();
+    if (!creator) {
+      return;
+    }
+    setLikedTrendCreators((current) => {
+      const next = current.includes(creator) ? current : [creator, ...current];
+      saveLikedTrendCreators(next);
+      return next;
+    });
+    setCreatorTrendInput("");
+  }
+
+  function handleRefreshCreatorTrends() {
+    setIsCreatorTrendLoading(true);
+    setCreatorTrendError("");
+    refreshCreatorTrends(likedTrendCreators)
+      .then((report) => {
+        setCreatorTrendReport(report);
+        setTrendRefreshSeed(0);
+      })
+      .catch((error) => setCreatorTrendError(error instanceof Error ? error.message : "联网刷新失败，请稍后重试。"))
+      .finally(() => setIsCreatorTrendLoading(false));
   }
 
   function openAiDishAsRecipe(dish: AiDishRecommendation) {
@@ -887,12 +929,15 @@ function App() {
           <section className="panel trends-panel">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">B站 / 小红书热门创作者</p>
-                <h2>UP主热门菜灵感</h2>
+                <p className="eyebrow">创作者订阅 / 公开网页搜索</p>
+                <h2>今晚跟谁学一道</h2>
               </div>
               <div className="trend-heading-actions">
+                <button className="primary-button" type="button" onClick={handleRefreshCreatorTrends} disabled={isCreatorTrendLoading}>
+                  {isCreatorTrendLoading ? "联网搜索中" : "联网刷新来源"}
+                </button>
                 <button className="secondary-button" type="button" onClick={refreshTrendBatch}>
-                  换一批
+                  换一批灵感
                 </button>
                 <button className="secondary-button" type="button" onClick={() => setActiveTab("recipes")}>
                   回菜谱库
@@ -900,11 +945,41 @@ function App() {
               </div>
             </div>
 
-            <div className="trend-note">
-              <strong>按创作者找菜</strong>
+            <div className="trend-pool-strip" aria-label="灵感池概览">
               <span>
-                这里优先放 B站 UP主和小红书高热美食博主的代表菜方向。喜欢某个创作者后，后续换一批会优先推荐同路线菜品。
+                <small>灵感池</small>
+                <strong>{activeTrendPool.length} 道菜</strong>
               </span>
+              <span>
+                <small>创作者</small>
+                <strong>{trendCreatorCount} 位</strong>
+              </span>
+              <span>
+                <small>当前批次</small>
+                <strong>
+                  {trendBatchNumber} / {trendBatchCount}
+                </strong>
+              </span>
+            </div>
+
+            <form className="creator-follow-form" onSubmit={followTrendCreator}>
+              <label>
+                <span>关注创作者</span>
+                <input
+                  value={creatorTrendInput}
+                  onChange={(event) => setCreatorTrendInput(event.target.value)}
+                  placeholder="例如：老饭骨、王刚、日食记"
+                />
+              </label>
+              <button className="small-primary-button" type="submit">
+                加入关注
+              </button>
+            </form>
+            {creatorTrendError && <p className="form-error">{creatorTrendError}</p>}
+
+            <div className="trend-note">
+              <strong>{creatorTrendReport?.source === "live-search" ? "已联网整理公开来源" : "当前使用备用灵感池"}</strong>
+              <span>{creatorTrendReport?.notes ?? "关注喜欢的创作者后，点击联网刷新来源。搜索结果会交给 DeepSeek 整理成适合晚餐的菜品。"}</span>
             </div>
 
             {likedTrendCreators.length > 0 && (
@@ -919,16 +994,15 @@ function App() {
             )}
 
             <div className="trend-grid">
-              {weeklyTrends.map((dish, index) => {
+              {weeklyTrends.map((dish) => {
                 const isCreatorLiked = likedTrendSet.has(dish.creator);
 
                 return (
                   <article className={isCreatorLiked ? "trend-card liked" : "trend-card"} key={dish.id}>
-                    <div className="trend-rank">#{index + 1}</div>
                     <div className="trend-card-main">
                       <div className="trend-card-header">
                         <div>
-                          <p className="eyebrow">{dish.source} / 热度 {getWeeklyTrendScore(dish, weeklyMenu.weekStart)}</p>
+                          <p className="eyebrow">{dish.source} / {dish.sourceUrl ? "公开来源" : "备用灵感"}</p>
                           <h3>{dish.name}</h3>
                         </div>
                         <span>{dish.cookTime}分钟</span>
@@ -959,15 +1033,17 @@ function App() {
                         >
                           {isCreatorLiked ? "已喜欢UP主" : "喜欢UP主"}
                         </button>
-                        <a href={getSourceSearchUrl(dish.source, dish.searchKeyword)} target="_blank" rel="noreferrer">
-                          去{dish.source === "综合" ? "小红书" : dish.source}搜这道
+                        <a href={dish.sourceUrl ?? getSourceSearchUrl(dish.source, dish.searchKeyword)} target="_blank" rel="noreferrer">
+                          {dish.sourceUrl ? "查看来源" : `去${dish.source === "综合" ? "小红书" : dish.source}搜这道`}
                         </a>
-                        <a
-                          href={getSourceSearchUrl(dish.source === "B站" ? "小红书" : "B站", dish.searchKeyword)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          跨平台搜
+                        <a href={getSourceSearchUrl("B站", dish.searchKeyword)} target="_blank" rel="noreferrer">
+                          搜B站
+                        </a>
+                        <a href={getSourceSearchUrl("小红书", dish.searchKeyword)} target="_blank" rel="noreferrer">
+                          搜小红书
+                        </a>
+                        <a href={getSourceSearchUrl("抖音", dish.searchKeyword)} target="_blank" rel="noreferrer">
+                          搜抖音
                         </a>
                         <button className="small-primary-button" type="button" onClick={() => openTrendAsRecipe(dish)}>
                           加入菜谱草稿
@@ -1124,7 +1200,7 @@ interface AuthScreenProps {
 
 function AuthScreen({ onSuccess }: AuthScreenProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(() => loadLastUsername());
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -1143,7 +1219,10 @@ function AuthScreen({ onSuccess }: AuthScreenProps) {
     setIsSubmitting(true);
     const action = isRegistering ? registerAccount(username, password) : loginAccount(username, password);
     action
-      .then(onSuccess)
+      .then((user) => {
+        saveLastUsername(user.username);
+        onSuccess(user);
+      })
       .catch((submitError) => {
         setError(submitError instanceof Error ? submitError.message : "账号操作失败");
       })

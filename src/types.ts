@@ -54,10 +54,9 @@ export type ShoppingCheckedState = Record<string, boolean>;
 export interface TrendingDish {
   id: string;
   name: string;
-  source: "小红书" | "B站" | "综合";
+  source: "小红书" | "B站" | "抖音" | "综合";
   creator: string;
   creatorNote: string;
-  heat: number;
   taste: RecipeTaste;
   difficulty: RecipeDifficulty;
   cookTime: number;
@@ -66,6 +65,15 @@ export interface TrendingDish {
   reason: string;
   tags: string[];
   searchKeyword: string;
+  sourceUrl?: string;
+}
+
+export interface CreatorTrendReport {
+  generatedAt: string;
+  source: "live-search" | "fallback";
+  notes: string;
+  creators: string[];
+  items: TrendingDish[];
 }
 
 export interface AiDishRecommendation {

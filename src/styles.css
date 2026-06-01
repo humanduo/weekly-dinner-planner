@@ -1900,6 +1900,67 @@ button:active,
   background: var(--tomato);
 }
 
+.trend-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trend-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.trend-pool-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.trend-pool-strip span {
+  display: grid;
+  gap: 3px;
+  padding: 11px 13px;
+  background: #fbfcfb;
+}
+
+.trend-pool-strip small {
+  color: #6f7f78;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.trend-pool-strip strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.creator-follow-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fbf9;
+}
+
+.creator-follow-form label {
+  display: grid;
+  gap: 6px;
+  color: #52635c;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.creator-follow-form input {
+  min-height: 40px;
+}
+
 .filters,
 .form-grid {
   gap: 10px;
@@ -1940,6 +2001,12 @@ textarea:focus {
 
 .checkbox-field input {
   accent-color: var(--tomato);
+}
+
+@media (max-width: 900px) {
+  .trend-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 700px) {
@@ -2030,5 +2097,13 @@ textarea:focus {
 
   .auth-copy h1 {
     font-size: 2rem;
+  }
+
+  .creator-follow-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .creator-follow-form .small-primary-button {
+    width: 100%;
   }
 }

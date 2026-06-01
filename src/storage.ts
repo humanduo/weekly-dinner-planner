@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   weeklyMenu: "weekly-recipes:v1:weekly-menu",
   shoppingChecked: "weekly-recipes:v1:shopping-checked",
   likedTrendCreators: "weekly-recipes:v1:liked-trend-creators",
+  lastUsername: "weekly-recipes:v1:last-username",
 } as const;
 
 export const sampleRecipes: Recipe[] = [
@@ -258,4 +259,12 @@ export function loadLikedTrendCreators(): string[] {
 
 export function saveLikedTrendCreators(creators: string[]) {
   writeJson(STORAGE_KEYS.likedTrendCreators, Array.from(new Set(creators)));
+}
+
+export function loadLastUsername() {
+  return window.localStorage.getItem(STORAGE_KEYS.lastUsername) ?? "";
+}
+
+export function saveLastUsername(username: string) {
+  window.localStorage.setItem(STORAGE_KEYS.lastUsername, username.trim());
 }
