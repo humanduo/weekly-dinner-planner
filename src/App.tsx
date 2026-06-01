@@ -158,14 +158,12 @@ const DISH_IMAGE_ASSETS = [
   "/images/dish-steamed-fish.jpg",
 ];
 
-function getDishImage(name: string) {
-  if (/鱼|鲈|海鲜/.test(name)) return DISH_IMAGE_ASSETS[3];
-  if (/虾/.test(name)) return DISH_IMAGE_ASSETS[2];
-  if (/番茄|牛腩|土豆|汤|煲|炖|锅/.test(name)) return DISH_IMAGE_ASSETS[1];
-  if (/肉|鸡|排骨|肘|丸|卤/.test(name)) return DISH_IMAGE_ASSETS[0];
-
-  const seed = [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0);
-  return DISH_IMAGE_ASSETS[seed % DISH_IMAGE_ASSETS.length];
+function getDishImage(name: string): string | null {
+  if (/红烧肉|东坡肉|梅菜扣肉|卤肉/.test(name)) return DISH_IMAGE_ASSETS[0];
+  if (/番茄牛腩|番茄炖牛肉|土豆牛腩|土豆炖牛肉/.test(name)) return DISH_IMAGE_ASSETS[1];
+  if (/(蒜香|蒜蓉|黄油).*(虾)|虾.*(蒜香|蒜蓉|黄油)/.test(name)) return DISH_IMAGE_ASSETS[2];
+  if (/(清蒸|葱油).*(鱼|鲈)|鱼.*(清蒸|葱油)/.test(name)) return DISH_IMAGE_ASSETS[3];
+  return null;
 }
 
 function trendToRecipe(dish: TrendingDish): Recipe {
@@ -877,9 +875,12 @@ function App() {
                 ) : recommendedRecipes.length === 0 ? (
                   <p className="empty-text">还没有匹配的晚餐菜谱，可以先去菜谱库新增一道。</p>
                 ) : (
-                  recommendedRecipes.map(({ recipe, matchedIngredients }) => (
-                    <article className="recommendation-card" key={recipe.id}>
-                      <img className="recommendation-image" src={getDishImage(recipe.name)} alt="" loading="lazy" />
+                  recommendedRecipes.map(({ recipe, matchedIngredients }) => {
+                    const image = getDishImage(recipe.name);
+
+                    return (
+                    <article className={image ? "recommendation-card has-image" : "recommendation-card"} key={recipe.id}>
+                      {image && <img className="recommendation-image" src={image} alt="" loading="lazy" />}
                       <button className="recommendation-main" type="button" onClick={() => setSelectedRecipeId(recipe.id)}>
                         <strong>{recipe.name}</strong>
                         <span>命中：{matchedIngredients.join("、")}</span>
@@ -891,7 +892,8 @@ function App() {
                         今天吃它
                       </button>
                     </article>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </aside>
@@ -1041,10 +1043,11 @@ function App() {
             <div className="trend-grid">
               {weeklyTrends.map((dish) => {
                 const isCreatorLiked = likedTrendSet.has(dish.creator);
+                const image = getDishImage(dish.name);
 
                 return (
                   <article className={isCreatorLiked ? "trend-card liked" : "trend-card"} key={dish.id}>
-                    <img className="dish-cover" src={getDishImage(dish.name)} alt={`${dish.name}成品参考图`} loading="lazy" />
+                    {image && <img className="dish-cover" src={image} alt={`${dish.name}成品参考图`} loading="lazy" />}
                     <div className="trend-card-main">
                       <div className="trend-card-header">
                         <div>
@@ -1647,9 +1650,12 @@ function AiCuisineGrid({ report, onAddRecipe }: AiCuisineGridProps) {
           </div>
 
           <div className="ai-dish-list">
-            {group.dishes.map((dish) => (
-              <div className="ai-dish-card" key={dish.id}>
-                <img className="ai-dish-image" src={getDishImage(dish.name)} alt="" loading="lazy" />
+            {group.dishes.map((dish) => {
+              const image = getDishImage(dish.name);
+
+              return (
+              <div className={image ? "ai-dish-card has-image" : "ai-dish-card"} key={dish.id}>
+                {image && <img className="ai-dish-image" src={image} alt="" loading="lazy" />}
                 <div>
                   <div className="trend-card-header">
                     <h4>{dish.name}</h4>
@@ -1678,7 +1684,8 @@ function AiCuisineGrid({ report, onAddRecipe }: AiCuisineGridProps) {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </article>
       ))}
