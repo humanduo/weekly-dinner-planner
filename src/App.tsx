@@ -151,6 +151,23 @@ function getSourceSearchUrl(source: TrendingDish["source"], keyword: string) {
   return `https://www.xiaohongshu.com/search_result?keyword=${encoded}`;
 }
 
+const DISH_IMAGE_ASSETS = [
+  "/images/dish-braised-pork.jpg",
+  "/images/dish-tomato-beef.jpg",
+  "/images/dish-garlic-shrimp.jpg",
+  "/images/dish-steamed-fish.jpg",
+];
+
+function getDishImage(name: string) {
+  if (/鱼|鲈|海鲜/.test(name)) return DISH_IMAGE_ASSETS[3];
+  if (/虾/.test(name)) return DISH_IMAGE_ASSETS[2];
+  if (/番茄|牛腩|土豆|汤|煲|炖|锅/.test(name)) return DISH_IMAGE_ASSETS[1];
+  if (/肉|鸡|排骨|肘|丸|卤/.test(name)) return DISH_IMAGE_ASSETS[0];
+
+  const seed = [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  return DISH_IMAGE_ASSETS[seed % DISH_IMAGE_ASSETS.length];
+}
+
 function trendToRecipe(dish: TrendingDish): Recipe {
   const sourceLabel = `${dish.source} ${dish.creator}`;
 
@@ -686,6 +703,15 @@ function App() {
           </div>
         )}
 
+        <div className="kitchen-cover">
+          <img src="/images/kitchen-cat-cover.jpg" alt="戴着围裙的猫猫在厨房等待晚餐安排" />
+          <div className="kitchen-cover-copy">
+            <p className="eyebrow">今日厨房值班</p>
+            <strong>猫猫正在等今天的晚餐</strong>
+    <span>{todayMenuDate.slice(5).replace("-", " / ")}</span>
+          </div>
+        </div>
+
         <div className="tonight-board">
           <div className="date-ticket">
             <span>{getDayLabel(todayMenuDate)}</span>
@@ -853,6 +879,7 @@ function App() {
                 ) : (
                   recommendedRecipes.map(({ recipe, matchedIngredients }) => (
                     <article className="recommendation-card" key={recipe.id}>
+                      <img className="recommendation-image" src={getDishImage(recipe.name)} alt="" loading="lazy" />
                       <button className="recommendation-main" type="button" onClick={() => setSelectedRecipeId(recipe.id)}>
                         <strong>{recipe.name}</strong>
                         <span>命中：{matchedIngredients.join("、")}</span>
@@ -1017,6 +1044,7 @@ function App() {
 
                 return (
                   <article className={isCreatorLiked ? "trend-card liked" : "trend-card"} key={dish.id}>
+                    <img className="dish-cover" src={getDishImage(dish.name)} alt={`${dish.name}成品参考图`} loading="lazy" />
                     <div className="trend-card-main">
                       <div className="trend-card-header">
                         <div>
@@ -1621,6 +1649,7 @@ function AiCuisineGrid({ report, onAddRecipe }: AiCuisineGridProps) {
           <div className="ai-dish-list">
             {group.dishes.map((dish) => (
               <div className="ai-dish-card" key={dish.id}>
+                <img className="ai-dish-image" src={getDishImage(dish.name)} alt="" loading="lazy" />
                 <div>
                   <div className="trend-card-header">
                     <h4>{dish.name}</h4>

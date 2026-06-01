@@ -1991,6 +1991,84 @@ button:active,
   background: #f0f7f4;
 }
 
+.kitchen-cover {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  min-height: 158px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f4efe4;
+}
+
+.kitchen-cover img {
+  display: block;
+  width: 100%;
+  height: clamp(158px, 17vw, 220px);
+  object-fit: cover;
+  object-position: center center;
+}
+
+.kitchen-cover-copy {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  width: min(52%, 560px);
+  padding: clamp(18px, 3vw, 34px);
+}
+
+.kitchen-cover-copy strong {
+  max-width: 400px;
+  color: #31483f;
+  font-size: clamp(1.25rem, 2.4vw, 2.25rem);
+  line-height: 1.1;
+}
+
+.kitchen-cover-copy span {
+  color: #708078;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.dish-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.recommendation-card {
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+}
+
+.recommendation-image {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.ai-dish-card {
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: start;
+}
+
+.ai-dish-image {
+  width: 86px;
+  height: 86px;
+  grid-row: span 2;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.ai-dish-card .trend-actions {
+  grid-column: 2;
+}
+
 .filters,
 .form-grid {
   gap: 10px;
@@ -2083,6 +2161,24 @@ textarea:focus {
     padding: 12px;
   }
 
+  .kitchen-cover {
+    min-height: 128px;
+  }
+
+  .kitchen-cover img {
+    height: 128px;
+    object-position: 58% center;
+  }
+
+  .kitchen-cover-copy {
+    width: 58%;
+    padding: 14px;
+  }
+
+  .kitchen-cover-copy strong {
+    font-size: 1.08rem;
+  }
+
   .tonight-copy {
     padding: 12px;
   }
@@ -2135,5 +2231,14 @@ textarea:focus {
 
   .creator-follow-form .small-primary-button {
     width: 100%;
+  }
+
+  .ai-dish-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .ai-dish-image {
+    width: 72px;
+    height: 72px;
   }
 }
