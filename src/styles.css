@@ -1902,11 +1902,15 @@ button:active,
 }
 
 .trend-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: block;
+  columns: 2;
+  column-gap: 9px;
 }
 
 .trend-card {
   grid-template-columns: minmax(0, 1fr);
+  break-inside: avoid;
+  margin-bottom: 9px;
 }
 
 .trend-pool-strip {
@@ -2114,7 +2118,7 @@ textarea:focus {
 
 @media (max-width: 900px) {
   .trend-grid {
-    grid-template-columns: minmax(0, 1fr);
+    columns: 1;
   }
 }
 

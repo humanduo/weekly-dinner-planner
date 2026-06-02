@@ -1047,7 +1047,7 @@ function App() {
 
                 return (
                   <article className={isCreatorLiked ? "trend-card liked" : "trend-card"} key={dish.id}>
-                    {image && <img className="dish-cover" src={image} alt={`${dish.name}成品参考图`} loading="lazy" />}
+                    {image && <img className="dish-cover" src={image} alt={`${dish.name}成品参考图`} />}
                     <div className="trend-card-main">
                       <div className="trend-card-header">
                         <div>
